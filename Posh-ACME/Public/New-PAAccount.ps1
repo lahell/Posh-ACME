@@ -7,7 +7,7 @@ function New-PAAccount {
         [Parameter(Position=1)]
         [ValidateScript({Test-ValidKeyLength $_ -ThrowOnFail})]
         [Alias('AccountKeyLength')]
-        [string]$KeyLength='ec-256',
+        [string]$KeyLength='2048',
         [switch]$AcceptTOS,
         [switch]$Force,
         [Parameter(ValueFromRemainingArguments=$true)]
@@ -147,7 +147,7 @@ function New-PAAccount {
         One or more email addresses to associate with this account. These addresses will be used by the ACME server to send certificate expiration notifications or other important account notices.
 
     .PARAMETER KeyLength
-        The type and size of private key to use. For RSA keys, specify a number between 2048-4096 (divisible by 128). For ECC keys, specify either 'ec-256' or 'ec-384'. Defaults to 'ec-256'.
+        The type and size of private key to use. For RSA keys, specify a number between 2048-4096 (divisible by 128). For ECC keys, specify either 'ec-256' or 'ec-384'. Defaults to '2048'.
 
     .PARAMETER AcceptTOS
         If not specified, the ACME server will throw an error with a link to the current Terms of Service. Using this switch indicates acceptance of those Terms of Service and is required for successful account creation.

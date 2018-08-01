@@ -14,7 +14,7 @@ function Set-PAAccount {
         [Parameter(ParameterSetName='Rollover')]
         [ValidateScript({Test-ValidKeyLength $_ -ThrowOnFail})]
         [Alias('AccountKeyLength')]
-        [string]$KeyLength='ec-256',
+        [string]$KeyLength='2048',
         [switch]$NoSwitch
     )
 
@@ -233,7 +233,7 @@ function Set-PAAccount {
         If specified, generate a new account key and replace the current one with it. Clients may choose to do this to recover from a key compromise or proactively mitigate the impact of an unnoticed key compromise.
 
     .PARAMETER KeyLength
-        The type and size of private key to use. For RSA keys, specify a number between 2048-4096 (divisible by 128). For ECC keys, specify either 'ec-256' or 'ec-384'. Defaults to 'ec-256'.
+        The type and size of private key to use. For RSA keys, specify a number between 2048-4096 (divisible by 128). For ECC keys, specify either 'ec-256' or 'ec-384'. Defaults to '2048'.
 
     .PARAMETER NoSwitch
         If specified, the currently active account will not change. Useful primarily for bulk updating contact information across accounts. This switch is ignored if no ID is specified.
