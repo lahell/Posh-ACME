@@ -9,6 +9,7 @@ function Import-PAConfig {
     # The config structure looks like this:
     # %LOCALAPPDATA%\Posh-ACME
     # - current-server.txt
+    # - enc-key.txt
     # %LOCALAPPDATA%\Posh-ACME\(server)
     # - dir.json
     # - current-account.txt
@@ -24,13 +25,13 @@ function Import-PAConfig {
     # change the account, they only need to reload it and orders. And so on.
 
     # make sure we have the root config folder
-    if ([string]::IsNullOrWhiteSpace($script:ConfigRoot)) {
+    if ([string]::IsNullOrWhiteSpace((Get-ConfigRoot))) {
         if ($IsWindows -or $PSVersionTable.PSEdition -eq 'Desktop') {
-            $script:ConfigRoot = Join-Path $env:LOCALAPPDATA 'Posh-ACME'
+            Set-ConfigRoot (Join-Path $env:LOCALAPPDATA 'Posh-ACME')
         } elseif ($IsLinux) {
-            $script:ConfigRoot = Join-Path $env:HOME '.config/Posh-ACME'
+            Set-ConfigRoot (Join-Path $env:HOME '.config/Posh-ACME')
         } elseif ($IsMacOs) {
-            $script:ConfigRoot = Join-Path $env:HOME 'Library/Preferences/Posh-ACME'
+            Set-ConfigRoot (Join-Path $env:HOME 'Library/Preferences/Posh-ACME')
         } else {
             throw "Unrecognized PowerShell platform"
         }
@@ -39,27 +40,33 @@ function Import-PAConfig {
         # based on an the POSHACME_HOME environment variable
         if (-not [string]::IsNullOrWhiteSpace($env:POSHACME_HOME)) {
             if (Test-Path $env:POSHACME_HOME -PathType Container) {
-                $script:ConfigRoot = $env:POSHACME_HOME
+                Set-ConfigRoot $env:POSHACME_HOME
             } else {
                 Write-Warning "The POSHACME_HOME environment variable exists but the path it points to, $($env:POSHACME_HOME), does not. Using default config location."
             }
         }
 
         # create the config folder if it doesn't already exist.
-        if (-not (Test-Path $script:ConfigRoot -PathType Container)) {
-            New-Item -ItemType Directory -Path $script:ConfigRoot -Force -EA Stop | Out-Null
+        if (-not (Test-Path (Get-ConfigRoot) -PathType Container)) {
+            New-Item -ItemType Directory -Path (Get-ConfigRoot) -Force -EA Stop | Out-Null
         }
+    }
+
+    # make sure we have an encryption key to use to (de)serialize secure strings and
+    # PSCredential objects across platforms
+    if (-not $Level -and -not (Get-EncKey)) {
+        New-EncKey
     }
 
     # start at the server level if nothing was specified or specifically requested
     if (!$Level -or $Level -eq 'Server') {
 
         # load the current ACME directory into memory if it exists on disk
-        $dirUrl = [string](Get-Content (Join-Path $script:ConfigRoot 'current-server.txt') -EA Ignore)
+        $dirUrl = [string](Get-Content (Join-Path (Get-ConfigRoot) 'current-server.txt') -EA Ignore)
         if (![string]::IsNullOrWhiteSpace($dirUrl)) {
 
             $dirFolder = $dirUrl.Replace('https://','').Replace(':','_')
-            $script:DirFolder = Join-Path $script:ConfigRoot $dirFolder.Substring(0,$dirFolder.IndexOf('/'))
+            Set-DirFolder (Join-Path (Get-ConfigRoot) $dirFolder.Substring(0,$dirFolder.IndexOf('/')))
             $script:Dir = Get-PAServer $dirUrl
 
             # deal with cert validation options between PS editions
@@ -86,10 +93,10 @@ function Import-PAConfig {
     if ($ImportAccount -or $Level -eq 'Account') {
 
         # load the current account into memory if it exists on disk
-        $acctID = [string](Get-Content (Join-Path $script:DirFolder 'current-account.txt') -EA Ignore)
+        $acctID = [string](Get-Content (Join-Path (Get-DirFolder) 'current-account.txt') -EA Ignore)
         if (![string]::IsNullOrWhiteSpace($acctID)) {
 
-            $script:AcctFolder = Join-Path $script:DirFolder $acctID
+            $script:AcctFolder = Join-Path (Get-DirFolder) $acctID
             $script:Acct = Get-PAAccount $acctID
 
             $ImportOrder = $true
