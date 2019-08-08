@@ -1,33 +1,43 @@
 # How To Use the Domeneshop DNS Plugin
 
-This plugin works against the [Domeneshop](https://domene.shop/) DNS provider. It is assumed that you have already setup an account and created the DNS zone(s) you will be working against.
-
-**Note:** The API is currently (May 2019) a beta ("version 0"). The interface may change before it is released and those changes may break this plugin. Domeneshop recommends not relying on the API for mission critical services until it has been released.
+This plugin works against [Domeneshop](https://domene.shop/). It is assumed that you have an existing account with at least one domain.
 
 ## Setup
 
-We need to retrieve an API token and secret for the account that will be used to update DNS records. [Login](https://www.domeneshop.no/admin?view=api) to Domeneshop using the account that will be used to update DNS.
+Domeneshop API is currently in beta. You have to [contact support](https://www.domeneshop.no/support) to get access to the [Domeneshop API](https://api.domeneshop.no/docs/).
 
 ## Using the Plugin
 
-The API token is specified using the `DomeneshopToken` parameter. The secret is specified either with `DomeneshopSecret` as a [SecureString](https://docs.microsoft.com/en-us/dotnet/api/system.security.securestring) or `DomeneshopSecretInsecure` as a regular string. The SecureString version can only be used on Windows OSes or any OS with PowerShell 6.2 or later. Non-Windows OSes on PowerShell 6.0-6.1 must use the regular string version due to [this issue](https://github.com/PowerShell/PowerShell/issues/1654).
+Your Domeneshop API credentials can either be passed to this plugin as PSCredential using the parameter `DomeneshopCredential`, or in plain text using parameters `DomeneshopToken` and `DomeneshopSecret`.
 
-### Windows and/or PS 6.2+ only
+### Windows or PowerShell Core 6.2 and later
 
 ```powershell
-$pArgs = @{
-    DomeneshopToken = 'xxxxxxxxxxxx'
-    DomeneshopSecret = (Read-Host "Secret" -AsSecureString)
-}
-New-PACertificate example.com -DnsPlugin Domeneshop -PluginArgs $pArgs
+$DomeneshopParams = @{ DomeneshopCredential = (Get-Credential) }
+New-PACertificate test.example.com -DnsPlugin Domeneshop -PluginArgs $DomeneshopParams
 ```
 
-### Any OS
+### Any Operating System
 
 ```powershell
-$pArgs = @{
-    DomeneshopToken = 'xxxxxxxxxxxx'
-    DomeneshopSecretInsecure = 'yyyyyyyyyyyy'
+$DomeneshopParams = @{ DomeneshopToken = 'MyToken'; DomeneshopSecret = 'MySecret' }
+New-PACertificate test.example.com -DnsPlugin Domeneshop -PluginArgs $DomeneshopParams
+```
+
+## Testing without Posh-ACME
+
+You can test this plugin without loading Posh-ACME by dot sourcing the plugin and calling the functions directly. Note that to avoid errors you will first have to set the variable `$script:UseBasic`.
+
+```
+. .\Domeneshop.ps1
+$script:UseBasic = @{ UseBasicParsing = $true }
+
+$DomeneshopParams = @{
+    RecordName = '_acme-challenge.example.com'
+    TxtValue = 'data'
+    DomeneshopCredential = (Get-Credential)
 }
-New-PACertificate example.com -DnsPlugin Domeneshop -PluginArgs $pArgs
+
+Add-DnsTxtDomeneshop @DomeneshopParams
+Remove-DnsTxtDomeneshop @DomeneshopParams
 ```
